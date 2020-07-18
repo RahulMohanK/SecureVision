@@ -1,24 +1,45 @@
 import face_recognition
 import cv2
 import numpy as np
+import requests
+import datetime
+import threading
+import time
+
+
+
+def send_embeddings(embeddings):
+    obj = {
+            "embedding"   : str(embeddings),
+            "cameraid"   : 1, 
+            "timestamp"  : datetime.datetime.now(),
+            "userid" : 7
+            }
+    print(datetime.datetime.now())
+    re = requests.post("http://vision.sreeraj.codes/api/add_analytics/",data=obj)
+    print(re.status_code)
+
+def send_data(face_names,face_encoding):
+    for faces in face_names:
+        send_embeddings(face_encoding)
+        print ("%s" % (time.ctime(time.time())))
+        
 
 
 video_capture = cv2.VideoCapture(0)
 
 
-obama_image = face_recognition.load_image_file("/home/rahul/rahul.jpg")
+obama_image = face_recognition.load_image_file("images/philip.jpg")
 obama_face_encoding = face_recognition.face_encodings(obama_image)[0]
-biden_image = face_recognition.load_image_file("/home/rahul/vylu.jpg")
-biden_face_encoding = face_recognition.face_encodings(biden_image)[0]
 
 
 known_face_encodings = [
     obama_face_encoding,
-    biden_face_encoding
+    #biden_face_encoding
 ]
+
 known_face_names = [
-    "rahul",
-    "vylu"
+    "",
 ]
 
 
@@ -26,7 +47,7 @@ face_locations = []
 face_encodings = []
 face_names = []
 process_this_frame = True
-
+oldtime = 0
 while True:
     
     ret, frame = video_capture.read()
@@ -47,18 +68,20 @@ while True:
         for face_encoding in face_encodings:
             
             matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
-            name = "Unknown"
+            name = ""
             face_distances = face_recognition.face_distance(known_face_encodings, face_encoding)
             best_match_index = np.argmin(face_distances)
             if matches[best_match_index]:
                 name = known_face_names[best_match_index]
-
             face_names.append(name)
 
     process_this_frame = not process_this_frame
 
+    if time.time() - oldtime > 10:
+        oldtime = time.time()
+        threading._start_new_thread(send_data,(face_names,face_encodings))
+        #print(face_encodings)
 
-    
     for (top, right, bottom, left), name in zip(face_locations, face_names):
         
         top *= 4
@@ -82,5 +105,12 @@ while True:
         break
 
 
+
+
 video_capture.release()
 cv2.destroyAllWindows()
+
+#mt.join()
+
+
+
